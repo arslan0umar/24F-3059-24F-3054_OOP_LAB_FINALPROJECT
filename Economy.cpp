@@ -25,13 +25,15 @@ void Economy::manage(ResourceManager& rm, Peasant& peasant, Merchant& merchant, 
             int oldRate = taxRate;
             taxRate = newRate;
 
-            int change = oldRate - newRate; 
-            peasant.updateSatisfaction(change * 2); 
-            merchant.updateSatisfaction(change); 
-            noble.updateSatisfaction(change / 2); 
+            // Update satisfaction based on tax change
+            int change = oldRate - newRate; // Positive if taxes went down
+            peasant.updateSatisfaction(change * 2); // Peasants care most about taxes
+            merchant.updateSatisfaction(change); // Merchants care about taxes
+            noble.updateSatisfaction(change / 2); // Nobles care least about taxes
 
             cout << "Tax rate changed from " << oldRate << "% to " << taxRate << "%.\n";
 
+            // Display updated satisfaction
             peasant.displayStatus();
             merchant.displayStatus();
             noble.displayStatus();
@@ -55,6 +57,7 @@ void Economy::manage(ResourceManager& rm, Peasant& peasant, Merchant& merchant, 
         cout << "  From nobles: " << nobleTax << " gold\n";
         cout << "  Total: " << totalTax << " gold\n";
 
+        // Tax collection affects satisfaction negatively
         peasant.updateSatisfaction(-1);
         merchant.updateSatisfaction(-1);
         noble.updateSatisfaction(-1);
@@ -66,10 +69,12 @@ void Economy::manage(ResourceManager& rm, Peasant& peasant, Merchant& merchant, 
             rm.consume("Gold", cost);
             cout << "Invested " << cost << " gold in the economy.\n";
 
+            // Economic investment benefits all classes
             peasant.updateSatisfaction(5);
-            merchant.updateSatisfaction(10); 
+            merchant.updateSatisfaction(10); // Merchants benefit most
             noble.updateSatisfaction(3);
 
+            // Increase resources slightly
             rm.gather("Food", 20);
             rm.gather("Wood", 15);
             rm.gather("Stone", 10);

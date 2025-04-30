@@ -33,22 +33,23 @@ void Leader::menu(Population& pop, Army& army) {
 
             string oldName = name;
             name = newNames[rand() % 5] + " " + lastName[rand() % 5];
-            popularity = 50 + (rand() % 30); 
+            popularity = 50 + (rand() % 30); // New leader starts with good popularity
 
             cout << oldName << " has been voted out!\n";
             cout << "The new leader is " << name << " with initial popularity of " << popularity << "%\n";
 
-            
+            // New leader affects army morale
             army.morale += 10;
             if (army.morale > 100) army.morale = 100;
         }
         else {
-            popularity += 10;
+            popularity += 10; // Re-election boosts popularity
             if (popularity > 100) popularity = 100;
 
             cout << name << " has been re-elected!\n";
             cout << "Popularity increased to " << popularity << "%\n";
 
+            // Re-election affects army morale positively
             army.morale += 5;
             if (army.morale > 100) army.morale = 100;
         }
@@ -69,7 +70,7 @@ void Leader::menu(Population& pop, Army& army) {
             army.morale += 20;
             if (army.morale > 100) army.morale = 100;
 
-            popularity -= 5; 
+            popularity -= 5; // Military focus might be unpopular
             if (popularity < 0) popularity = 0;
 
             cout << "Army morale increased to " << army.morale << "%\n";
@@ -78,7 +79,7 @@ void Leader::menu(Population& pop, Army& army) {
 
         case 2:
             cout << name << " has shifted focus to economic growth!\n";
-            popularity += 10; 
+            popularity += 10; // Economic focus is generally popular
             if (popularity > 100) popularity = 100;
 
             cout << "Leader popularity increased to " << popularity << "%\n";
@@ -86,9 +87,9 @@ void Leader::menu(Population& pop, Army& army) {
 
         case 3:
             cout << name << " has shifted focus to population welfare!\n";
-            pop.modify(pop.getTotal() / 10); 
+            pop.modify(pop.getTotal() / 10); // Population increases
 
-            popularity += 15; 
+            popularity += 15; // Population focus is very popular
             if (popularity > 100) popularity = 100;
 
             cout << "Population has grown thanks to welfare policies.\n";
@@ -103,28 +104,30 @@ void Leader::menu(Population& pop, Army& army) {
     case 3: {
         cout << "Attempting a coup against " << name << "...\n";
 
+        // Coup success depends on leader popularity and army morale
         int coupChance = 100 - popularity + (50 - army.morale / 2);
         int coupResult = rand() % 100;
 
         if (coupResult < coupChance) {
             string oldName = name;
             name = "General " + string(1, 'A' + (rand() % 26)) + ". " + string(1, 'A' + (rand() % 26)) + ".";
-            popularity = 40 + (rand() % 20); 
+            popularity = 40 + (rand() % 20); // Military leaders start with moderate popularity
 
             cout << "The coup was successful! " << oldName << " has been overthrown!\n";
             cout << "The new leader is " << name << " with initial popularity of " << popularity << "%\n";
 
+            // Coup affects army and population
             army.morale += 15;
             if (army.morale > 100) army.morale = 100;
-            pop.modify(-pop.getTotal() / 20); 
+            pop.modify(-pop.getTotal() / 20); // Some population lost in the coup
         }
         else {
             cout << "The coup attempt failed! Guards have arrested the rebels.\n";
 
-            popularity -= 15; 
+            popularity -= 15; // Failed coup hurts popularity
             if (popularity < 0) popularity = 0;
 
-            army.morale -= 20; 
+            army.morale -= 20; // Failed coup hurts army morale
             if (army.morale < 0) army.morale = 0;
 
             cout << "Leader popularity decreased to " << popularity << "%\n";
@@ -135,6 +138,7 @@ void Leader::menu(Population& pop, Army& army) {
     case 4: {
         cout << name << " gives an inspiring speech to the population!\n";
 
+        // Speech effectiveness depends on leader popularity
         int speechEffect = 5 + (popularity / 10);
 
         popularity += 5;

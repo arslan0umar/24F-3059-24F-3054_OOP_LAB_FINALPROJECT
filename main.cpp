@@ -4,13 +4,16 @@
 #include "Stronghold.h"
 using namespace std;
 
+// Function to display a clean horizontal border
 void displayBorder(int width = 60, char symbol = '-') {
     cout << string(width, symbol) << endl;
 }
 
+// Function to display centered text within borders
 void displayCenteredText(const string& text, int width = 60, char borderChar = '|') {
     int padding = (width - text.length() - 2) / 2;
     cout << borderChar << string(padding, ' ') << text;
+    // Handle odd-length strings
     if ((width - text.length()) % 2 != 0) {
         cout << string(padding + 1, ' ');
     }
@@ -20,6 +23,7 @@ void displayCenteredText(const string& text, int width = 60, char borderChar = '
     cout << borderChar << endl;
 }
 
+// Function to display a title box with consistent formatting
 void displayTitleBox(const string& title, const string& subtitle = "") {
     displayBorder(60, '=');
     displayCenteredText(title, 60, '|');
@@ -35,23 +39,29 @@ void displayKingdomStatus(const ResourceManager& rm, const Population& pop,
 
     displayTitleBox("KINGDOM STATUS");
 
+    // Display leader information
     cout << "\n--- LEADERSHIP ---\n";
     leader.display();
 
+    // Display population information
     cout << "\n--- POPULATION ---\n";
     pop.display();
 
+    // Display social classes information
     cout << "\n--- SOCIAL CLASSES ---\n";
     peasant.displayStatus();
     merchant.displayStatus();
     noble.displayStatus();
 
+    // Display military information
     cout << "\n--- MILITARY ---\n";
     army.display();
 
+    // Display economic information
     cout << "\n--- ECONOMY ---\n";
     bank.display();
 
+    // Display resource information
     cout << "\n--- RESOURCES ---\n";
     rm.display();
 
@@ -130,8 +140,10 @@ void tradeResources(ResourceManager& rm) {
 }
 
 int main() {
+    // Seed random number generator
     srand(time(0));
 
+    // Initialize all game systems
     ResourceManager resourceManager;
     Army army;
     Bank bank;
@@ -140,6 +152,7 @@ int main() {
     Population population;
     EventManager eventManager;
 
+    // Initialize social classes
     Peasant peasant;
     Merchant merchant;
     Noble noble;
@@ -310,7 +323,9 @@ int main() {
             cout << "Invalid choice! Please try again.\n";
         }
 
+        // End of turn actions (only if game is still running)
         if (running && choice != 9 && choice != 10) {
+            // Natural population changes
             population.naturalChange();
 
             // Check for emigration due to low satisfaction
@@ -326,6 +341,8 @@ int main() {
                 peasant.updateSatisfaction(-5);
             }
 
+
+            // Check for resource depletion
             if (!resourceManager.hasResource("Food", 10)) {
                 displayTitleBox("WARNING");
                 cout << "Food supplies are critically low!\n";
@@ -333,6 +350,7 @@ int main() {
                 peasant.updateSatisfaction(-5);
             }
 
+            // Random minor event chance (20%)
             if (rand() % 100 < 20) {
                 displayTitleBox("RANDOM EVENT");
                 cout << "A minor event occurred...\n";

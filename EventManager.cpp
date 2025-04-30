@@ -9,7 +9,7 @@ void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army,
 
     cout << "\n===== Random Event Triggered =====\n";
 
-    
+    // Ensure true randomness
     srand(time(0));
     int randEvent = rand() % 5;
 
@@ -23,7 +23,7 @@ void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army,
             rm.consume("Food", foodLoss);
         }
         else {
-            rm.consume("Food", 0); 
+            rm.consume("Food", 0); // Consume all remaining food
         }
 
         pop.modify(-(10 + (rand() % 15)));
@@ -48,12 +48,14 @@ void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army,
         cout << "You lost " << soldierLoss << " soldiers in battle.\n";
         cout << "Army morale has decreased to " << army.morale << ".\n";
 
+        // War affects economy
         rm.consume("Gold", 20);
         rm.consume("Iron", 15);
 
+        // Different classes react differently to war
         peasant.updateSatisfaction(-10);
         merchant.updateSatisfaction(-8);
-        noble.updateSatisfaction(5); 
+        noble.updateSatisfaction(5); // Nobles often benefit from war
 
         break;
     }
@@ -65,9 +67,11 @@ void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army,
 
         cout << "You lost " << popLoss << " people to the disease.\n";
 
+        // Plague affects economy
         rm.consume("Gold", 15);
         rm.consume("Food", 10);
 
+        // All classes suffer from plague
         peasant.updateSatisfaction(-12);
         merchant.updateSatisfaction(-10);
         noble.updateSatisfaction(-8);
@@ -82,6 +86,7 @@ void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army,
 
         cout << "Food stores increased by " << foodGain << ".\n";
 
+        // Good harvest improves morale and satisfaction
         army.morale += 5;
         if (army.morale > 100) army.morale = 100;
 
@@ -99,6 +104,7 @@ void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army,
 
         cout << "Treasury increased by " << goldGain << " gold.\n";
 
+        // Trade boom benefits merchants most
         peasant.updateSatisfaction(5);
         merchant.updateSatisfaction(15);
         noble.updateSatisfaction(8);

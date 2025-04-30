@@ -4,7 +4,7 @@
 using namespace std;
 
 ResourceManager::ResourceManager() {
-    resourceCount = 5; 
+    resourceCount = 5; // Added Gold as a resource
     resourceNames[0] = "Food";
     resourceNames[1] = "Wood";
     resourceNames[2] = "Stone";
@@ -16,6 +16,7 @@ ResourceManager::ResourceManager() {
 }
 
 void ResourceManager::gather(string resource, int amount) {
+    // Check if resource exists
     int index = findResourceIndex(resource);
 
     if (index != -1) {
@@ -29,6 +30,7 @@ void ResourceManager::gather(string resource, int amount) {
 }
 
 void ResourceManager::consume(string resource, int amount) {
+    // Check if resource exists
     int index = findResourceIndex(resource);
 
     if (index != -1) {

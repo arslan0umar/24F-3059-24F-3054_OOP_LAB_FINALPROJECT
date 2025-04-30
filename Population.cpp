@@ -1,5 +1,7 @@
 #include "Stronghold.h"
 #include <iostream>
+#include <cstdlib>
+#include <ctime>
 using namespace std;
 
 Population::Population() : count(100) {}
@@ -12,6 +14,28 @@ void Population::modify(int amt) {
     }
     else {
         cout << "Population changed by " << amt << ". New population: " << count << ".\n";
+    }
+}
+
+void Population::naturalChange() {
+    // Random fluctuation in population based on natural causes
+    int randFactor = rand() % 100;
+    int change = 0;
+
+    if (randFactor < 30) {
+        // 30% chance of population decrease due to natural causes
+        change = -(rand() % 5 + 1); // Decrease by 1-5 people
+        cout << "Some citizens have passed away due to natural causes or have migrated from the kingdom.\n";
+    }
+    else if (randFactor < 70) {
+        // 40% chance of population increase due to births
+        change = rand() % 3 + 1; // Increase by 1-3 people
+        cout << "New births and incoming settlers have slightly increased your population.\n";
+    }
+    // 30% chance of no change
+
+    if (change != 0) {
+        modify(change);
     }
 }
 

@@ -15,6 +15,7 @@ public:
     SocialClass() : satisfaction(50) {}
     virtual void updateSatisfaction(int change) = 0;
     virtual void displayStatus() const = 0;
+    virtual int checkEmigration(Population& pop) = 0; // New function to check for emigration
     int getSatisfaction() const { return satisfaction; }
 protected:
     int satisfaction; // 0-100
@@ -24,18 +25,21 @@ class Peasant : public SocialClass {
 public:
     void updateSatisfaction(int change) override;
     void displayStatus() const override;
+    int checkEmigration(Population& pop) override;
 };
 
 class Merchant : public SocialClass {
 public:
     void updateSatisfaction(int change) override;
     void displayStatus() const override;
+    int checkEmigration(Population& pop) override;
 };
 
 class Noble : public SocialClass {
 public:
     void updateSatisfaction(int change) override;
     void displayStatus() const override;
+    int checkEmigration(Population& pop) override;
 };
 
 class ResourceManager {
@@ -49,6 +53,10 @@ public:
     void loadResources(const string& filename);
     bool hasResource(const string& name, int amount);
     int findResourceIndex(const string& name) const;
+    // Accessor methods for save/load
+    string getResourceName(int index) const { return resourceNames[index]; }
+    int getResourceValue(int index) const { return resourceValues[index]; }
+    int getResourceCount() const { return resourceCount; }
 private:
     string resourceNames[10];
     int resourceValues[10];
@@ -86,6 +94,8 @@ public:
     Economy();
     void manage(ResourceManager& rm, Peasant& peasant, Merchant& merchant, Noble& noble);
     void display() const;
+    int getTaxRate() const { return taxRate; }
+    void setTaxRate(int newRate) { taxRate = newRate; }
 private:
     int taxRate;
 };
@@ -94,6 +104,7 @@ class Population {
 public:
     Population();
     void modify(int amt);
+    void naturalChange(); // New function for natural population changes
     void display() const;
     int getTotal() const { return count; }
     void setTotal(int newCount) { count = newCount; }
@@ -126,9 +137,11 @@ public:
     static void logScore(const string& info);
     static void saveGame(const Population& pop, const Army& army,
         const Bank& bank, const Leader& leader,
-        const ResourceManager& rm);
+        const ResourceManager& rm, const Economy& economy,
+        const Peasant& peasant, const Merchant& merchant, const Noble& noble);
     static bool loadGame(Population& pop, Army& army, Bank& bank,
-        Leader& leader, ResourceManager& rm);
+        Leader& leader, ResourceManager& rm, Economy& economy,
+        Peasant& peasant, Merchant& merchant, Noble& noble);
 };
 
 #endif

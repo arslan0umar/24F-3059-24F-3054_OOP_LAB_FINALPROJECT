@@ -285,8 +285,8 @@ int main() {
 
         case 9: {
             displayTitleBox("SAVE GAME");
-            resourceManager.saveResources("game_save.txt");
-            Logger::saveGame(population, army, bank, leader, resourceManager);
+            Logger::saveGame(population, army, bank, leader, resourceManager,
+                economy, peasant, merchant, noble);
             string scoreInfo = "Session saved on Turn " + to_string(turn) + " with Population " + to_string(population.getTotal());
             Logger::logScore(scoreInfo);
             cout << "Game saved successfully.\n";
@@ -295,7 +295,8 @@ int main() {
 
         case 10: {
             displayTitleBox("LOAD GAME");
-            if (Logger::loadGame(population, army, bank, leader, resourceManager)) {
+            if (Logger::loadGame(population, army, bank, leader, resourceManager,
+                economy, peasant, merchant, noble)) {
                 cout << "Game loaded successfully.\n";
             }
             break;
@@ -310,9 +311,19 @@ int main() {
         }
 
         if (running && choice != 9 && choice != 10) {
-            int popGrowth = population.getTotal() / 50; 
-            if (popGrowth > 0) {
-                population.modify(popGrowth);
+            population.naturalChange();
+
+            // Check for emigration due to low satisfaction
+            peasant.checkEmigration(population);
+            merchant.checkEmigration(population);
+            noble.checkEmigration(population);
+
+            // Food shortage effects
+            if (!resourceManager.hasResource("Food", 10)) {
+                displayTitleBox("WARNING");
+                cout << "Food supplies are critically low!\n";
+                population.modify(-5);
+                peasant.updateSatisfaction(-5);
             }
 
             if (!resourceManager.hasResource("Food", 10)) {
@@ -351,6 +362,7 @@ int main() {
     cout << "\nThank you for playing Stronghold!\n";
     cout << "Final score: " << population.getTotal() * 10 << "\n";
 
+    // Log final score
     string finalScoreInfo = "Final score: " + to_string(population.getTotal() * 10) +
         " after " + to_string(turn) + " turns";
     Logger::logScore(finalScoreInfo);

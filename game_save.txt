@@ -1,0 +1,14 @@
+0
+85 0
+0
+dawood 45
+5
+Food 100
+Gold 50
+Wood 80
+Stone 60
+Iron 30
+10
+0
+0
+0

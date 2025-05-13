@@ -4,114 +4,50 @@
 #include <ctime>
 using namespace std;
 
-void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army,
-    Peasant& peasant, Merchant& merchant, Noble& noble) {
-
-    cout << "\n===== Random Event Triggered =====\n";
-
-    // Ensure true randomness
-    srand(time(0));
-    int randEvent = rand() % 5;
-
-    switch (randEvent) {
-    case 0: {
-        cout << "FAMINE: A devastating famine has struck your kingdom!\n";
-        cout << "Food stores reduced, population decreased, and morale lowered.\n";
-
-        int foodLoss = 30 + (rand() % 20);
-        if (rm.hasResource("Food", foodLoss)) {
-            rm.consume("Food", foodLoss);
+void EventManager::trigger(ResourceManager& rm, Population& pop, Army& army, Peasant& peasant,
+    Merchant& merchant, Noble& noble, int playerId) {
+    try {
+        int event = rand() % 4; // 4 possible events
+        cout << "\n===== Random Event =====\n";
+        switch (event) {
+        case 0: // Good Harvest
+            cout << "A bountiful harvest increases food supplies!\n";
+            rm.gather("Food", 50, playerId); // Added playerId
+            peasant.updateSatisfaction(5);
+            break;
+        case 1: // Bandit Raid
+            cout << "Bandits raid your kingdom, stealing resources!\n";
+            if (rm.hasResource("Gold", 20)) {
+                rm.consume("Gold", 20, playerId); // Added playerId
+            }
+            else {
+                army.setMorale(army.getMorale() - 10);
+                cout << "No gold to steal, army morale decreases.\n";
+            }
+            break;
+        case 2: // Plague
+            cout << "A plague strikes, reducing population!\n";
+            pop.modify(-20);
+            peasant.updateSatisfaction(-10);
+            merchant.updateSatisfaction(-5);
+            noble.updateSatisfaction(-5);
+            break;
+        case 3: // Festival
+            cout << "A grand festival boosts morale and satisfaction!\n";
+            if (rm.hasResource("Food", 30)) {
+                rm.consume("Food", 30, playerId); // Added playerId
+                army.setMorale(army.getMorale() + 10);
+                peasant.updateSatisfaction(10);
+                merchant.updateSatisfaction(10);
+                noble.updateSatisfaction(10);
+            }
+            else {
+                cout << "Not enough food for the festival.\n";
+            }
+            break;
         }
-        else {
-            rm.consume("Food", 0); // Consume all remaining food
-        }
-
-        pop.modify(-(10 + (rand() % 15)));
-        army.morale -= 10;
-        if (army.morale < 0) army.morale = 0;
-
-        peasant.updateSatisfaction(-15);
-        merchant.updateSatisfaction(-5);
-        noble.updateSatisfaction(-3);
-
-        cout << "The famine has severely impacted your kingdom.\n";
-        break;
     }
-    case 1: {
-        cout << "WAR: A neighboring kingdom has declared war!\n";
-
-        int soldierLoss = army.getSoldiers() / 4;
-        army.setSoldiers(army.getSoldiers() - soldierLoss);
-        army.morale -= 15;
-        if (army.morale < 0) army.morale = 0;
-
-        cout << "You lost " << soldierLoss << " soldiers in battle.\n";
-        cout << "Army morale has decreased to " << army.morale << ".\n";
-
-        // War affects economy
-        rm.consume("Gold", 20);
-        rm.consume("Iron", 15);
-
-        // Different classes react differently to war
-        peasant.updateSatisfaction(-10);
-        merchant.updateSatisfaction(-8);
-        noble.updateSatisfaction(5); // Nobles often benefit from war
-
-        break;
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
-    case 2: {
-        cout << "PLAGUE: A deadly plague spreads through your kingdom!\n";
-
-        int popLoss = pop.getTotal() / 5;
-        pop.modify(-popLoss);
-
-        cout << "You lost " << popLoss << " people to the disease.\n";
-
-        // Plague affects economy
-        rm.consume("Gold", 15);
-        rm.consume("Food", 10);
-
-        // All classes suffer from plague
-        peasant.updateSatisfaction(-12);
-        merchant.updateSatisfaction(-10);
-        noble.updateSatisfaction(-8);
-
-        break;
-    }
-    case 3: {
-        cout << "GOOD HARVEST: This year's harvest was exceptional!\n";
-
-        int foodGain = 50 + (rand() % 30);
-        rm.gather("Food", foodGain);
-
-        cout << "Food stores increased by " << foodGain << ".\n";
-
-        // Good harvest improves morale and satisfaction
-        army.morale += 5;
-        if (army.morale > 100) army.morale = 100;
-
-        peasant.updateSatisfaction(10);
-        merchant.updateSatisfaction(5);
-        noble.updateSatisfaction(3);
-
-        break;
-    }
-    case 4: {
-        cout << "TRADE BOOM: A sudden increase in trade has boosted your economy!\n";
-
-        int goldGain = 50 + (rand() % 50);
-        rm.gather("Gold", goldGain);
-
-        cout << "Treasury increased by " << goldGain << " gold.\n";
-
-        // Trade boom benefits merchants most
-        peasant.updateSatisfaction(5);
-        merchant.updateSatisfaction(15);
-        noble.updateSatisfaction(8);
-
-        break;
-    }
-    }
-
-    cout << "Event effects have been applied to your kingdom.\n";
 }

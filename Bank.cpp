@@ -1,76 +1,87 @@
 #include "Stronghold.h"
 #include <iostream>
+#include <string>
 using namespace std;
 
 Bank::Bank() : loan(0) {}
 
-void Bank::menu(ResourceManager& rm) {
-    int choice;
-    cout << "\n===== Bank Menu =====\n";
-    cout << "Current loan: " << loan << " gold\n";
-    cout << "1. Take Loan\n";
-    cout << "2. Repay Loan\n";
-    cout << "3. Back to Main Menu\n";
-    cout << "Enter your choice: ";
-    cin >> choice;
-
-    switch (choice) {
-    case 1: {
-        int amt;
-        cout << "Enter loan amount: ";
-        cin >> amt;
-        if (amt > 0) {
-            rm.gather("Gold", amt);
-            loan += amt;
-            int interest = amt / 10; // 10% interest
-            loan += interest;
-            cout << "Loan taken: " << amt << " gold with " << interest << " gold interest.\n";
-            cout << "Total debt: " << loan << " gold\n";
+void Bank::setLoan(int newLoan) {
+    try {
+        if (newLoan < 0) {
+            throw GameException("Loan amount cannot be negative!");
         }
-        else {
-            cout << "Invalid amount. Must be positive.\n";
-        }
-        break;
+        loan = newLoan;
+        cout << "Loan set to " << loan << " gold.\n";
     }
-    case 2: {
-        int repay;
-        cout << "Enter repay amount (max " << loan << "): ";
-        cin >> repay;
-        if (repay <= 0) {
-            cout << "Invalid amount. Must be positive.\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+    }
+}
+
+void Bank::menu(ResourceManager& rm, int playerId) {
+    try {
+        int choice;
+        cout << "\n===== Banking Menu =====\n";
+        cout << "1. Take Loan\n";
+        cout << "2. Repay Loan\n";
+        cout << "3. View Loan Status\n";
+        cout << "4. Back to Main Menu\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1: {
+            cout << "Enter amount to borrow: ";
+            int amount;
+            cin >> amount;
+            if (amount <= 0) {
+                throw GameException("Loan amount must be positive!");
+            }
+            setLoan(loan + amount);
+            rm.gather("Gold", amount, playerId); // Added playerId
+            cout << "Borrowed " << amount << " gold. New loan: " << loan << "\n";
             break;
         }
-
-        if (repay > loan) {
-            cout << "Amount exceeds your loan. Maximum payment possible: " << loan << endl;
-            repay = loan;
+        case 2: {
+            cout << "Enter amount to repay: ";
+            int amount;
+            cin >> amount;
+            if (amount <= 0) {
+                throw GameException("Repayment amount must be positive!");
+            }
+            if (amount > loan) {
+                throw GameException("Cannot repay more than the current loan!");
+            }
+            if (!rm.hasResource("Gold", amount)) {
+                throw GameException("Not enough gold to repay the loan!");
+            }
+            rm.consume("Gold", amount, playerId); // Added playerId
+            setLoan(loan - amount);
+            cout << "Repaid " << amount << " gold. Remaining loan: " << loan << "\n";
+            break;
         }
-
-        if (rm.hasResource("Gold", repay)) {
-            rm.consume("Gold", repay);
-            loan -= repay;
-            cout << "Paid " << repay << " gold. Remaining debt: " << loan << " gold\n";
+        case 3:
+            display();
+            break;
+        case 4:
+            cout << "Returning to main menu.\n";
+            break;
+        default:
+            throw GameException("Invalid choice!");
         }
-        else {
-            cout << "Not enough gold to repay. Check your treasury.\n";
-        }
-        break;
     }
-    case 3:
-        cout << "Returning to main menu.\n";
-        break;
-    default:
-        cout << "Invalid option.\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
 }
 
 void Bank::display() const {
     cout << "Bank Status:\n";
-    cout << "  Current loan: " << loan << " gold\n";
+    cout << "  Current Loan: " << loan << " gold\n";
     if (loan > 0) {
-        cout << "  Interest accruing at 10% rate.\n";
+        cout << "  Interest due soon. Ensure you have gold to repay!\n";
     }
     else {
-        cout << "  No current debt.\n";
+        cout << "  No outstanding loans.\n";
     }
 }

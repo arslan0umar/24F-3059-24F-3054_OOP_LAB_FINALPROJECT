@@ -3,57 +3,40 @@
 using namespace std;
 
 void Merchant::updateSatisfaction(int change) {
-    satisfaction += change * 2;
-    if (satisfaction < 0) satisfaction = 0;
-    if (satisfaction > 100) satisfaction = 100;
-}
-
-int Merchant::checkEmigration(Population& pop) {
-    int emigrants = 0;
-
-    if (satisfaction < 10) {
-        // Mass exodus when satisfaction is critically low
-        emigrants = pop.getTotal() / 8; // 12.5% leave
-        cout << "CRISIS: Merchants are closing their shops and leaving the kingdom!\n";
+    try {
+        satisfaction += change;
+        if (satisfaction > 100) satisfaction = 100;
+        if (satisfaction < 0) satisfaction = 0;
     }
-    else if (satisfaction < 25) {
-        // Significant emigration
-        emigrants = pop.getTotal() / 15; // ~6.7% leave
-        cout << "WARNING: Several merchants are relocating their businesses elsewhere!\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
-    else if (satisfaction < 40) {
-        // Small emigration
-        emigrants = pop.getTotal() / 25; // 4% leave
-        cout << "Some merchants have moved to find better trade opportunities.\n";
-    }
-
-    // Ensure at least 1 person leaves if calculated to leave
-    if (emigrants > 0 && emigrants < 1) emigrants = 1;
-
-    if (emigrants > 0) {
-        pop.modify(-emigrants);
-    }
-
-    return emigrants;
 }
 
 void Merchant::displayStatus() const {
     cout << "Merchant Status:\n";
     cout << "  Satisfaction: " << satisfaction << "%\n";
+    cout << "  ";
+    if (satisfaction > 80) cout << "Merchants are thriving and investing heavily.";
+    else if (satisfaction > 60) cout << "Merchants are conducting business as usual.";
+    else if (satisfaction > 40) cout << "Merchants are cautious and reducing trade.";
+    else if (satisfaction > 20) cout << "Merchants are hoarding wealth.";
+    else cout << "Merchants are fleeing the kingdom!";
+    cout << "\n";
+}
 
-    if (satisfaction < 20) {
-        cout << "  Warning: Merchants are leaving the kingdom!\n";
+int Merchant::checkEmigration(Population& pop) {
+    try {
+        if (satisfaction < 40) {
+            int emigrants = pop.getTotal() / 20; // 5% may leave
+            pop.modify(-emigrants);
+            cout << emigrants << " merchants have emigrated due to low satisfaction.\n";
+            return emigrants;
+        }
+        return 0;
     }
-    else if (satisfaction < 40) {
-        cout << "  Merchants are concerned about trade conditions.\n";
-    }
-    else if (satisfaction < 60) {
-        cout << "  Merchants are conducting business as usual.\n";
-    }
-    else if (satisfaction < 80) {
-        cout << "  Merchants are prospering under your rule.\n";
-    }
-    else {
-        cout << "  The merchant class is thriving and expanding rapidly.\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+        return 0;
     }
 }

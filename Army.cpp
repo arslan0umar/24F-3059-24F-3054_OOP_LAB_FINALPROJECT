@@ -2,60 +2,66 @@
 #include <iostream>
 using namespace std;
 
-Army::Army() : soldiers(10), morale(100) {}
+Army::Army() : soldiers(100), morale(50) {}
+
+void Army::setSoldiers(int newSoldiers) {
+    try {
+        if (newSoldiers < 0) {
+            throw GameException("Soldier count cannot be negative!");
+        }
+        soldiers = newSoldiers;
+    }
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+    }
+}
+
+void Army::setMorale(int newMorale) {
+    try {
+        morale = newMorale;
+        if (morale > 100) morale = 100;
+        if (morale < 0) morale = 0;
+    }
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+    }
+}
 
 void Army::train(ResourceManager& rm) {
-    int foodCost = 10;
-    int goldCost = 5;
-
-    if (rm.hasResource("Food", foodCost) && rm.hasResource("Gold", goldCost)) {
-        rm.consume("Food", foodCost);
-        rm.consume("Gold", goldCost);
-        soldiers += 5;
-        morale += 2;
-        cout << "Trained 5 soldiers. Current strength: " << soldiers << ". Morale increased to " << morale << ".\n";
+    try {
+        if (!rm.hasResource("Food", 20) || !rm.hasResource("Gold", 10)) {
+            throw GameException("Not enough resources to train army!");
+        }
+        rm.consume("Food", 20, 0); // Player ID 0 for non-player-specific actions
+        rm.consume("Gold", 10, 0);
+        soldiers += 10;
+        morale += 5;
+        if (morale > 100) morale = 100;
+        cout << "Trained 10 soldiers. New total: " << soldiers << ", Morale: " << morale << "%\n";
     }
-    else {
-        cout << "Not enough resources to train. Required: " << foodCost << " Food and " << goldCost << " Gold.\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
 }
 
 void Army::pay(ResourceManager& rm) {
-    int payment = soldiers * 2;
-    if (rm.hasResource("Gold", payment)) {
-        rm.consume("Gold", payment);
-        morale += 5;
+    try {
+        if (!rm.hasResource("Gold", 5)) {
+            throw GameException("Not enough gold to pay army!");
+        }
+        rm.consume("Gold", 5, 0);
+        morale += 10;
         if (morale > 100) morale = 100;
-        cout << "Army paid " << payment << " gold. Morale boosted to " << morale << ".\n";
+        cout << "Paid army. Morale increased to " << morale << "%\n";
     }
-    else {
-        cout << "Insufficient gold (" << payment << " needed). Morale decreased!\n";
-        morale -= 10;
-        if (morale < 0) morale = 0;
-        cout << "New morale: " << morale << endl;
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
 }
 
 void Army::display() const {
     cout << "Army Status:\n";
-    cout << "  Soldiers: " << soldiers << endl;
-    cout << "  Morale: " << morale << "%" << endl;
-
-    cout << "  Army strength: ";
-    if (morale > 80) {
-        cout << "Excellent";
-    }
-    else if (morale > 60) {
-        cout << "Good";
-    }
-    else if (morale > 40) {
-        cout << "Average";
-    }
-    else if (morale > 20) {
-        cout << "Poor";
-    }
-    else {
-        cout << "Critical - desertion risk!";
-    }
-    cout << endl;
+    cout << "  Soldiers: " << soldiers << "\n";
+    cout << "  Morale: " << morale << "%\n";
+    cout << "  Strength: " << (soldiers * morale / 100) << "\n";
 }

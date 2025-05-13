@@ -3,57 +3,40 @@
 using namespace std;
 
 void Peasant::updateSatisfaction(int change) {
-    satisfaction += change;
-    if (satisfaction < 0) satisfaction = 0;
-    if (satisfaction > 100) satisfaction = 100;
-}
-
-int Peasant::checkEmigration(Population& pop) {
-    int emigrants = 0;
-
-    if (satisfaction < 10) {
-        // Mass exodus when satisfaction is critically low
-        emigrants = pop.getTotal() / 5; // 20% leave
-        cout << "CRISIS: Many peasants are leaving the kingdom due to extreme dissatisfaction!\n";
+    try {
+        satisfaction += change;
+        if (satisfaction > 100) satisfaction = 100;
+        if (satisfaction < 0) satisfaction = 0;
     }
-    else if (satisfaction < 25) {
-        // Significant emigration
-        emigrants = pop.getTotal() / 10; // 10% leave
-        cout << "WARNING: Several peasants are leaving due to poor conditions!\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
-    else if (satisfaction < 40) {
-        // Small emigration
-        emigrants = pop.getTotal() / 20; // 5% leave
-        cout << "Some peasants have left your kingdom seeking better lives elsewhere.\n";
-    }
-
-    // Ensure at least 1 person leaves if calculated to leave
-    if (emigrants > 0 && emigrants < 1) emigrants = 1;
-
-    if (emigrants > 0) {
-        pop.modify(-emigrants);
-    }
-
-    return emigrants;
 }
 
 void Peasant::displayStatus() const {
     cout << "Peasant Status:\n";
     cout << "  Satisfaction: " << satisfaction << "%\n";
+    cout << "  ";
+    if (satisfaction > 80) cout << "Peasants are joyful and productive.";
+    else if (satisfaction > 60) cout << "Peasants are content.";
+    else if (satisfaction > 40) cout << "Peasants are discontent and grumbling.";
+    else if (satisfaction > 20) cout << "Peasants are angry and rebellious.";
+    else cout << "Peasants are on the verge of revolt!";
+    cout << "\n";
+}
 
-    if (satisfaction < 20) {
-        cout << "  Warning: Peasants are close to rebellion!\n";
+int Peasant::checkEmigration(Population& pop) {
+    try {
+        if (satisfaction < 30) {
+            int emigrants = pop.getTotal() / 10; // 10% may leave
+            pop.modify(-emigrants);
+            cout << emigrants << " peasants have emigrated due to low satisfaction.\n";
+            return emigrants;
+        }
+        return 0;
     }
-    else if (satisfaction < 40) {
-        cout << "  Peasants are discontent and grumbling.\n";
-    }
-    else if (satisfaction < 60) {
-        cout << "  Peasants are acceptably content.\n";
-    }
-    else if (satisfaction < 80) {
-        cout << "  Peasants are satisfied with their conditions.\n";
-    }
-    else {
-        cout << "  Peasants are extremely happy with your rule.\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+        return 0;
     }
 }

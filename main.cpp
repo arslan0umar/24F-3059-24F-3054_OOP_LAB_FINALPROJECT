@@ -1,20 +1,21 @@
 ﻿#include <iostream>
 #include <string>
 #include <iomanip>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
 #include "Stronghold.h"
 using namespace std;
 
-// Function to display a clean horizontal border
 void displayBorder(int width = 60, char symbol = '-') {
     cout << string(width, symbol) << endl;
 }
 
-// Function to display centered text within borders
 void displayCenteredText(const string& text, int width = 60, char borderChar = '|') {
-    int padding = (width - text.length() - 2) / 2;
+    int textLength = static_cast<int>(text.length());
+    int padding = (width - textLength - 2) / 2;
     cout << borderChar << string(padding, ' ') << text;
-    // Handle odd-length strings
-    if ((width - text.length()) % 2 != 0) {
+    if ((width - textLength) % 2 != 0) {
         cout << string(padding + 1, ' ');
     }
     else {
@@ -23,7 +24,6 @@ void displayCenteredText(const string& text, int width = 60, char borderChar = '
     cout << borderChar << endl;
 }
 
-// Function to display a title box with consistent formatting
 void displayTitleBox(const string& title, const string& subtitle = "") {
     displayBorder(60, '=');
     displayCenteredText(title, 60, '|');
@@ -36,354 +36,583 @@ void displayTitleBox(const string& title, const string& subtitle = "") {
 void displayKingdomStatus(const ResourceManager& rm, const Population& pop,
     const Army& army, const Bank& bank, const Leader& leader,
     const Peasant& peasant, const Merchant& merchant, const Noble& noble) {
-
     displayTitleBox("KINGDOM STATUS");
-
-    // Display leader information
     cout << "\n--- LEADERSHIP ---\n";
     leader.display();
-
-    // Display population information
     cout << "\n--- POPULATION ---\n";
     pop.display();
-
-    // Display social classes information
     cout << "\n--- SOCIAL CLASSES ---\n";
     peasant.displayStatus();
     merchant.displayStatus();
     noble.displayStatus();
-
-    // Display military information
     cout << "\n--- MILITARY ---\n";
     army.display();
-
-    // Display economic information
     cout << "\n--- ECONOMY ---\n";
     bank.display();
-
-    // Display resource information
     cout << "\n--- RESOURCES ---\n";
     rm.display();
-
     displayBorder();
 }
 
-void gatherResources(ResourceManager& rm) {
+void gatherResources(ResourceManager& rm, int playerId) {
     displayTitleBox("RESOURCE GATHERING");
     cout << "\nAvailable resources:\n";
     rm.display();
-
-    cout << "\nEnter resource to gather (or 'back' to return): ";
-    string name;
-    cin >> name;
-
-    if (name == "back") return;
-
+    cout << "\nEnter resource number to gather (or 0 to return): ";
+    int resourceNum;
+    cin >> resourceNum;
+    if (resourceNum == 0) return;
+    if (resourceNum < 1 || resourceNum > rm.getResourceCount()) {
+        cout << "Invalid resource number!\n";
+        return;
+    }
     cout << "Enter amount to gather: ";
     int amount;
     cin >> amount;
-
-    if (amount <= 0) {
-        cout << "Amount must be positive.\n";
-        return;
+    try {
+        if (amount <= 0) {
+            throw GameException("Amount must be positive.");
+        }
+        rm.gather(rm.getResourceName(resourceNum - 1), amount, playerId);
     }
-
-    rm.gather(name, amount);
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+    }
 }
 
-void consumeResources(ResourceManager& rm) {
+void consumeResources(ResourceManager& rm, int playerId) {
     displayTitleBox("RESOURCE CONSUMPTION");
     cout << "\nAvailable resources:\n";
     rm.display();
-
-    cout << "\nEnter resource to consume (or 'back' to return): ";
-    string name;
-    cin >> name;
-
-    if (name == "back") return;
-
+    cout << "\nEnter resource number to consume (or 0 to return): ";
+    int resourceNum;
+    cin >> resourceNum;
+    if (resourceNum == 0) return;
+    if (resourceNum < 1 || resourceNum > rm.getResourceCount()) {
+        cout << "Invalid resource number!\n";
+        return;
+    }
     cout << "Enter amount to consume: ";
     int amount;
     cin >> amount;
-
-    if (amount <= 0) {
-        cout << "Amount must be positive.\n";
-        return;
+    try {
+        if (amount <= 0) {
+            throw GameException("Amount must be positive.");
+        }
+        rm.consume(rm.getResourceName(resourceNum - 1), amount, playerId);
     }
-
-    rm.consume(name, amount);
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+    }
 }
 
 void tradeResources(ResourceManager& rm) {
     displayTitleBox("RESOURCE TRADING");
     cout << "\nAvailable resources:\n";
     rm.display();
-
-    cout << "\nEnter resource to trade from: ";
-    string fromResource;
-    cin >> fromResource;
-
-    cout << "Enter resource to trade to: ";
-    string toResource;
-    cin >> toResource;
-
+    cout << "\nEnter resource number to trade from: ";
+    int fromNum;
+    cin >> fromNum;
+    if (fromNum < 1 || fromNum > rm.getResourceCount()) {
+        cout << "Invalid resource number!\n";
+        return;
+    }
+    cout << "Enter resource number to trade to: ";
+    int toNum;
+    cin >> toNum;
+    if (toNum < 1 || toNum > rm.getResourceCount()) {
+        cout << "Invalid resource number!\n";
+        return;
+    }
     cout << "Enter amount to trade: ";
     int amount;
     cin >> amount;
-
-    if (amount <= 0) {
-        cout << "Amount must be positive.\n";
-        return;
+    try {
+        if (amount <= 0) {
+            throw GameException("Amount must be positive.");
+        }
+        rm.trade(rm.getResourceName(fromNum - 1), rm.getResourceName(toNum - 1), amount);
     }
-
-    rm.trade(fromResource, toResource, amount);
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
+    }
 }
 
-int main() {
-    // Seed random number generator
-    srand(time(0));
-
-    // Initialize all game systems
-    ResourceManager resourceManager;
+struct Player {
+    ResourceManager rm;
     Army army;
     Bank bank;
     Economy economy;
     Leader leader;
     Population population;
-    EventManager eventManager;
-
-    // Initialize social classes
     Peasant peasant;
     Merchant merchant;
     Noble noble;
+    int id;
+    string name;
+};
 
+int main() {
+    srand(static_cast<unsigned int>(time(0)));
     displayTitleBox("STRONGHOLD GAME", "Medieval Kingdom Simulator");
 
-    cout << "\nWelcome to your kingdom, " << leader.getName() << "!\n";
-    cout << "You are now in charge of managing all aspects of your medieval stronghold.\n";
-    cout << "Make wise decisions to ensure the prosperity and survival of your realm.\n";
+    // Get number of players
+    int numPlayers;
+    do {
+        cout << "Enter number of players (1-10): ";
+        cin >> numPlayers;
+        if (numPlayers < 1 || numPlayers > 10) {
+            cout << "Please enter a number between 1 and 10.\n";
+        }
+    } while (numPlayers < 1 || numPlayers > 10);
+    cin.ignore(); // Clear newline
+
+    // Initialize players
+    vector<Player> players(numPlayers);
+    Communication comm;
+    Diplomacy diplomacy;
+    Market market;
+    Conflict conflict;
+    Map map;
+    EventManager eventManager;
+
+    // Get player names and initialize kingdoms
+    for (int i = 0; i < numPlayers; i++) {
+        cout << "Enter name for Player " << (i + 1) << ": ";
+        string playerName;
+        getline(cin, playerName);
+        if (playerName.empty()) {
+            playerName = "Player " + to_string(i + 1);
+        }
+        players[i].id = i + 1;
+        players[i].name = playerName;
+        players[i].leader.setName(playerName);
+        // Random map placement
+        int x, y;
+        bool validPosition;
+        do {
+            x = rand() % 10;
+            y = rand() % 10;
+            validPosition = !map.isPositionOccupied(x, y);
+        } while (!validPosition);
+        map.movePlayer(players[i].id, x, y);
+        cout << "Kingdom for " << playerName << " (Player " << players[i].id << ") formed at (" << x << ", " << y << ").\n";
+    }
 
     bool running = true;
     int turn = 1;
 
     while (running) {
-        displayBorder();
-        displayTitleBox("TURN " + to_string(turn) + " - " + leader.getName() + "'s Realm");
+        for (int i = 0; i < numPlayers; i++) {
+            displayBorder();
+            displayTitleBox("TURN " + to_string(turn) + " - " + players[i].name + "'s Realm",
+                "Leader: " + players[i].leader.getName());
+            displayTitleBox("STRONGHOLD GAME MENU");
+            cout << "1. Display Kingdom Status\n";
+            cout << "2. Resource Management\n";
+            cout << "3. Population Management\n";
+            cout << "4. Military Management\n";
+            cout << "5. Economy Management\n";
+            cout << "6. Leadership Actions\n";
+            cout << "7. Banking System\n";
+            cout << "8. Trigger Random Event\n";
+            cout << "9. Communication\n";
+            cout << "10. Diplomacy\n";
+            cout << "11. Market\n";
+            cout << "12. Conflict\n";
+            cout << "13. Map\n";
+            cout << "14. Save Game\n";
+            cout << "15. Load Game\n";
+            cout << "0. Exit Game\n";
+            cout << "\nEnter your choice: ";
 
-        displayTitleBox("STRONGHOLD GAME MENU");
-        cout << "1. Display Kingdom Status\n";
-        cout << "2. Resource Management\n";
-        cout << "3. Population Management\n";
-        cout << "4. Military Management\n";
-        cout << "5. Economy Management\n";
-        cout << "6. Leadership Actions\n";
-        cout << "7. Banking System\n";
-        cout << "8. Trigger Random Event\n";
-        cout << "9. Save Game\n";
-        cout << "10. Load Game\n";
-        cout << "0. Exit Game\n";
-        cout << "\nEnter your choice: ";
+            int choice;
+            cin >> choice;
 
-        int choice;
-        cin >> choice;
-
-        switch (choice) {
-        case 1:
-            displayKingdomStatus(resourceManager, population, army, bank, leader,
-                peasant, merchant, noble);
-            break;
-
-        case 2: {
-            displayTitleBox("RESOURCE MANAGEMENT");
-            cout << "1. Gather Resources\n";
-            cout << "2. Consume Resources\n";
-            cout << "3. Trade Resources\n";
-            cout << "4. Display Resources\n";
-            cout << "Enter choice: ";
-            int resourceChoice;
-            cin >> resourceChoice;
-
-            switch (resourceChoice) {
-            case 1: gatherResources(resourceManager); break;
-            case 2: consumeResources(resourceManager); break;
-            case 3: tradeResources(resourceManager); break;
-            case 4:
-                displayTitleBox("RESOURCES");
-                resourceManager.display();
-                break;
-            default: cout << "Invalid resource management choice.\n";
-            }
-            break;
-        }
-
-        case 3: {
-            displayTitleBox("POPULATION MANAGEMENT");
-            cout << "1. View Population\n";
-            cout << "2. Modify Population\n";
-            cout << "3. View Social Class Status\n";
-            cout << "Enter choice: ";
-            int popChoice;
-            cin >> popChoice;
-
-            switch (popChoice) {
-            case 1:
-                displayTitleBox("POPULATION STATUS");
-                population.display();
-                break;
-            case 2: {
-                cout << "Enter amount to increase (+) or decrease (-): ";
-                int amount;
-                cin >> amount;
-                population.modify(amount);
-                break;
-            }
-            case 3:
-                displayTitleBox("SOCIAL CLASS STATUS");
-                peasant.displayStatus();
-                merchant.displayStatus();
-                noble.displayStatus();
-                break;
-            default:
-                cout << "Invalid population management choice.\n";
-            }
-            break;
-        }
-
-        case 4: {
-            displayTitleBox("MILITARY MANAGEMENT");
-            cout << "1. Train Army\n";
-            cout << "2. Pay Army\n";
-            cout << "3. Display Army Status\n";
-            cout << "Enter choice: ";
-            int militaryChoice;
-            cin >> militaryChoice;
-
-            switch (militaryChoice) {
-            case 1:
-                displayTitleBox("ARMY TRAINING");
-                army.train(resourceManager);
-                break;
-            case 2:
-                displayTitleBox("ARMY PAYMENT");
-                army.pay(resourceManager);
-                break;
-            case 3:
-                displayTitleBox("ARMY STATUS");
-                army.display();
-                break;
-            default: cout << "Invalid military management choice.\n";
-            }
-            break;
-        }
-
-        case 5:
-            displayTitleBox("ECONOMY MANAGEMENT");
-            economy.manage(resourceManager, peasant, merchant, noble);
-            break;
-
-        case 6:
-            displayTitleBox("LEADERSHIP ACTIONS");
-            leader.menu(population, army);
-            break;
-
-        case 7:
-            displayTitleBox("BANKING SYSTEM");
-            bank.menu(resourceManager);
-            break;
-
-        case 8:
-            displayTitleBox("RANDOM EVENT");
-            eventManager.trigger(resourceManager, population, army, peasant, merchant, noble);
-            break;
-
-        case 9: {
-            displayTitleBox("SAVE GAME");
-            Logger::saveGame(population, army, bank, leader, resourceManager,
-                economy, peasant, merchant, noble);
-            string scoreInfo = "Session saved on Turn " + to_string(turn) + " with Population " + to_string(population.getTotal());
-            Logger::logScore(scoreInfo);
-            cout << "Game saved successfully.\n";
-            break;
-        }
-
-        case 10: {
-            displayTitleBox("LOAD GAME");
-            if (Logger::loadGame(population, army, bank, leader, resourceManager,
-                economy, peasant, merchant, noble)) {
-                cout << "Game loaded successfully.\n";
-            }
-            break;
-        }
-
-        case 0:
-            running = false;
-            break;
-
-        default:
-            cout << "Invalid choice! Please try again.\n";
-        }
-
-        // End of turn actions (only if game is still running)
-        if (running && choice != 9 && choice != 10) {
-            // Natural population changes
-            population.naturalChange();
-
-            // Check for emigration due to low satisfaction
-            peasant.checkEmigration(population);
-            merchant.checkEmigration(population);
-            noble.checkEmigration(population);
-
-            // Food shortage effects
-            if (!resourceManager.hasResource("Food", 10)) {
-                displayTitleBox("WARNING");
-                cout << "Food supplies are critically low!\n";
-                population.modify(-5);
-                peasant.updateSatisfaction(-5);
-            }
-
-
-            // Check for resource depletion
-            if (!resourceManager.hasResource("Food", 10)) {
-                displayTitleBox("WARNING");
-                cout << "Food supplies are critically low!\n";
-                population.modify(-5);
-                peasant.updateSatisfaction(-5);
-            }
-
-            // Random minor event chance (20%)
-            if (rand() % 100 < 20) {
-                displayTitleBox("RANDOM EVENT");
-                cout << "A minor event occurred...\n";
-                int minorEvent = rand() % 3;
-                switch (minorEvent) {
-                case 0:
-                    cout << "Some trade caravans arrived, bringing extra gold!\n";
-                    resourceManager.gather("Gold", 15);
-                    break;
+            try {
+                switch (choice) {
                 case 1:
-                    cout << "Local farmers had a good harvest this month.\n";
-                    resourceManager.gather("Food", 20);
+                    displayKingdomStatus(players[i].rm, players[i].population, players[i].army,
+                        players[i].bank, players[i].leader, players[i].peasant,
+                        players[i].merchant, players[i].noble);
                     break;
-                case 2:
-                    cout << "Craftsmen produced extra building materials.\n";
-                    resourceManager.gather("Wood", 15);
-                    resourceManager.gather("Stone", 10);
+
+                case 2: {
+                    displayTitleBox("RESOURCE MANAGEMENT");
+                    cout << "1. Gather Resources\n";
+                    cout << "2. Consume Resources\n";
+                    cout << "3. Trade Resources\n";
+                    cout << "4. Display Resources\n";
+                    cout << "Enter choice: ";
+                    int resourceChoice;
+                    cin >> resourceChoice;
+                    switch (resourceChoice) {
+                    case 1: gatherResources(players[i].rm, players[i].id); break;
+                    case 2: consumeResources(players[i].rm, players[i].id); break;
+                    case 3: tradeResources(players[i].rm); break;
+                    case 4:
+                        displayTitleBox("RESOURCES");
+                        players[i].rm.display();
+                        break;
+                    default: throw GameException("Invalid resource management choice.");
+                    }
                     break;
                 }
-            }
 
+                case 3: {
+                    displayTitleBox("POPULATION MANAGEMENT");
+                    cout << "1. View Population\n";
+                    cout << "2. Modify Population\n";
+                    cout << "3. View Social Class Status\n";
+                    cout << "Enter choice: ";
+                    int popChoice;
+                    cin >> popChoice;
+                    switch (popChoice) {
+                    case 1:
+                        displayTitleBox("POPULATION STATUS");
+                        players[i].population.display();
+                        break;
+                    case 2: {
+                        cout << "Enter amount to increase (+) or decrease (-): ";
+                        int amount;
+                        cin >> amount;
+                        players[i].population.modify(amount);
+                        break;
+                    }
+                    case 3:
+                        displayTitleBox("SOCIAL CLASS STATUS");
+                        players[i].peasant.displayStatus();
+                        players[i].merchant.displayStatus();
+                        players[i].noble.displayStatus();
+                        break;
+                    default: throw GameException("Invalid population management choice.");
+                    }
+                    break;
+                }
+
+                case 4: {
+                    displayTitleBox("MILITARY MANAGEMENT");
+                    cout << "1. Train Army\n";
+                    cout << "2. Pay Army\n";
+                    cout << "3. Display Army Status\n";
+                    cout << "Enter choice: ";
+                    int militaryChoice;
+                    cin >> militaryChoice;
+                    switch (militaryChoice) {
+                    case 1:
+                        displayTitleBox("ARMY TRAINING");
+                        players[i].army.train(players[i].rm);
+                        break;
+                    case 2:
+                        displayTitleBox("ARMY PAYMENT");
+                        players[i].army.pay(players[i].rm);
+                        break;
+                    case 3:
+                        displayTitleBox("ARMY STATUS");
+                        players[i].army.display();
+                        break;
+                    default: throw GameException("Invalid military management choice.");
+                    }
+                    break;
+                }
+
+                case 5:
+                    displayTitleBox("ECONOMY MANAGEMENT");
+                    players[i].economy.manage(players[i].rm, players[i].peasant, players[i].merchant, players[i].noble, players[i].id); // Added playerId
+                    break;
+
+                case 6:
+                    displayTitleBox("LEADERSHIP ACTIONS");
+                    players[i].leader.menu(players[i].population, players[i].army);
+                    break;
+
+                case 7:
+                    displayTitleBox("BANKING SYSTEM");
+                    players[i].bank.menu(players[i].rm, players[i].id); // Added playerId
+                    break;
+
+                case 8:
+                    displayTitleBox("RANDOM EVENT");
+                    eventManager.trigger(players[i].rm, players[i].population, players[i].army,
+                        players[i].peasant, players[i].merchant, players[i].noble, players[i].id); // Added playerId
+                    break;
+
+                case 9: {
+                    displayTitleBox("COMMUNICATION");
+                    cout << "1. Send Message\n";
+                    cout << "2. View Messages\n";
+                    cout << "Enter choice: ";
+                    int commChoice;
+                    cin >> commChoice;
+                    if (commChoice == 1) {
+                        cout << "Enter recipient Player ID (1-" << numPlayers << "): ";
+                        int receiverId;
+                        cin >> receiverId;
+                        if (receiverId < 1 || receiverId > numPlayers || receiverId == players[i].id) {
+                            throw GameException("Invalid recipient ID.");
+                        }
+                        cout << "Enter message: ";
+                        cin.ignore();
+                        string message;
+                        getline(cin, message);
+                        comm.sendMessage(players[i].id, receiverId, message);
+                    }
+                    else if (commChoice == 2) {
+                        comm.displayMessages(players[i].id);
+                    }
+                    else {
+                        throw GameException("Invalid communication choice.");
+                    }
+                    break;
+                }
+
+                case 10: {
+                    displayTitleBox("DIPLOMACY");
+                    cout << "1. Form Alliance\n";
+                    cout << "2. Break Alliance\n";
+                    cout << "3. View Treaties\n";
+                    cout << "Enter choice: ";
+                    int dipChoice;
+                    cin >> dipChoice;
+                    if (dipChoice == 1 || dipChoice == 2) {
+                        cout << "Enter other Player ID (1-" << numPlayers << "): ";
+                        int otherId;
+                        cin >> otherId;
+                        if (otherId < 1 || otherId > numPlayers || otherId == players[i].id) {
+                            throw GameException("Invalid player ID.");
+                        }
+                        if (dipChoice == 1) {
+                            diplomacy.formAlliance(players[i].id, otherId);
+                        }
+                        else {
+                            diplomacy.breakAlliance(players[i].id, otherId);
+                        }
+                    }
+                    else if (dipChoice == 3) {
+                        diplomacy.displayTreaties();
+                    }
+                    else {
+                        throw GameException("Invalid diplomacy choice.");
+                    }
+                    break;
+                }
+
+                case 11: {
+                    displayTitleBox("MARKET");
+                    cout << "1. Trade\n";
+                    cout << "2. Smuggle\n";
+                    cout << "3. View Transactions\n";
+                    cout << "Enter choice: ";
+                    int marketChoice;
+                    cin >> marketChoice;
+                    if (marketChoice == 1) {
+                        cout << "Enter recipient Player ID (1-" << numPlayers << "): ";
+                        int receiverId;
+                        cin >> receiverId;
+                        if (receiverId < 1 || receiverId > numPlayers || receiverId == players[i].id) {
+                            throw GameException("Invalid recipient ID.");
+                        }
+                        cout << "Your resources:\n";
+                        players[i].rm.display();
+                        cout << "Player " << receiverId << "'s resources:\n";
+                        players[receiverId - 1].rm.display();
+                        cout << "Enter your resource number to trade: ";
+                        int resourceNum1;
+                        cin >> resourceNum1;
+                        cout << "Enter their resource number to receive: ";
+                        int resourceNum2;
+                        cin >> resourceNum2;
+                        cout << "Enter amount to trade: ";
+                        int amount;
+                        cin >> amount;
+                        market.trade(players[i].rm, players[receiverId - 1].rm, resourceNum1, resourceNum2, amount, players[i].id, receiverId);
+                    }
+                    else if (marketChoice == 2) {
+                        cout << "Enter recipient Player ID (1-" << numPlayers << "): ";
+                        int receiverId;
+                        cin >> receiverId;
+                        if (receiverId < 1 || receiverId > numPlayers || receiverId == players[i].id) {
+                            throw GameException("Invalid recipient ID.");
+                        }
+                        cout << "Enter resource to smuggle: ";
+                        string resource;
+                        cin >> resource;
+                        cout << "Enter amount: ";
+                        int amount;
+                        cin >> amount;
+                        market.smuggle(players[i].rm, players[receiverId - 1].rm, resource, amount, players[i].id, receiverId);
+                    }
+                    else if (marketChoice == 3) {
+                        market.displayMarket();
+                    }
+                    else {
+                        throw GameException("Invalid market choice.");
+                    }
+                    break;
+                }
+
+                case 12: {
+                    displayTitleBox("CONFLICT");
+                    cout << "1. Declare War\n";
+                    cout << "2. Betray Ally\n";
+                    cout << "3. View Wars\n";
+                    cout << "Enter choice: ";
+                    int conflictChoice;
+                    cin >> conflictChoice;
+                    if (conflictChoice == 1 || conflictChoice == 2) {
+                        cout << "Enter target Player ID (1-" << numPlayers << "): ";
+                        int targetId;
+                        cin >> targetId;
+                        if (targetId < 1 || targetId > numPlayers || targetId == players[i].id) {
+                            throw GameException("Invalid target ID.");
+                        }
+                        if (conflictChoice == 1) {
+                            conflict.declareWar(players[i].id, targetId, players[i].army, players[targetId - 1].army,
+                                players[i].leader, players[targetId - 1].leader,
+                                players[i].peasant, players[i].merchant, players[i].noble,
+                                players[targetId - 1].peasant, players[targetId - 1].merchant, players[targetId - 1].noble);
+                        }
+                        else {
+                            conflict.betray(players[i].id, targetId, diplomacy, players[i].army, players[targetId - 1].army,
+                                players[i].leader, players[targetId - 1].leader,
+                                players[i].peasant, players[i].merchant, players[i].noble,
+                                players[targetId - 1].peasant, players[targetId - 1].merchant, players[targetId - 1].noble);
+                        }
+                    }
+                    else if (conflictChoice == 3) {
+                        conflict.displayWars();
+                    }
+                    else {
+                        throw GameException("Invalid conflict choice.");
+                    }
+                    break;
+                }
+
+                case 13: {
+                    displayTitleBox("MAP");
+                    cout << "1. Move Position\n";
+                    cout << "2. View Map\n";
+                    cout << "Enter choice: ";
+                    int mapChoice;
+                    cin >> mapChoice;
+                    if (mapChoice == 1) {
+                        cout << "Enter new X coordinate (0-9): ";
+                        int x;
+                        cin >> x;
+                        cout << "Enter new Y coordinate (0-9): ";
+                        int y;
+                        cin >> y;
+                        map.movePlayer(players[i].id, x, y);
+                    }
+                    else if (mapChoice == 2) {
+                        map.displayMap();
+                    }
+                    else {
+                        throw GameException("Invalid map choice.");
+                    }
+                    break;
+                }
+
+                case 14: {
+                    displayTitleBox("SAVE GAME");
+                    for (int j = 0; j < numPlayers; j++) {
+                        Logger::saveGame(players[j].population, players[j].army, players[j].bank,
+                            players[j].leader, players[j].rm, players[j].economy,
+                            players[j].peasant, players[j].merchant, players[j].noble);
+                    }
+                    comm.saveMessages();
+                    diplomacy.saveTreaties();
+                    market.saveMarket();
+                    conflict.saveWars();
+                    map.saveMap();
+                    string scoreInfo = "Session saved on Turn " + to_string(turn) + " for Player " + players[i].name;
+                    Logger::logScore(scoreInfo);
+                    cout << "Game saved successfully.\n";
+                    break;
+                }
+
+                case 15: {
+                    displayTitleBox("LOAD GAME");
+                    bool success = true;
+                    for (int j = 0; j < numPlayers; j++) {
+                        if (!Logger::loadGame(players[j].population, players[j].army, players[j].bank,
+                            players[j].leader, players[j].rm, players[j].economy,
+                            players[j].peasant, players[j].merchant, players[j].noble)) {
+                            success = false;
+                        }
+                    }
+                    comm.loadMessages();
+                    diplomacy.loadTreaties();
+                    market.loadMarket();
+                    conflict.loadWars();
+                    map.loadMap();
+                    if (success) {
+                        cout << "Game loaded successfully.\n";
+                    }
+                    else {
+                        cout << "Some errors occurred while loading.\n";
+                    }
+                    break;
+                }
+
+                case 0:
+                    running = false;
+                    break;
+
+                default:
+                    throw GameException("Invalid choice!");
+                }
+
+                if (running && choice != 14 && choice != 15) {
+                    players[i].population.naturalChange();
+                    players[i].peasant.checkEmigration(players[i].population);
+                    players[i].merchant.checkEmigration(players[i].population);
+                    players[i].noble.checkEmigration(players[i].population);
+                    if (!players[i].rm.hasResource("Food", 10)) {
+                        displayTitleBox("WARNING");
+                        cout << "Food supplies are critically low!\n";
+                        players[i].population.modify(-5);
+                        players[i].peasant.updateSatisfaction(-5);
+                    }
+                    if (rand() % 100 < 20) {
+                        displayTitleBox("RANDOM EVENT");
+                        cout << "A minor event occurred...\n";
+                        int minorEvent = rand() % 3;
+                        switch (minorEvent) {
+                        case 0:
+                            cout << "Some trade caravans arrived, bringing extra gold!\n";
+                            players[i].rm.gather("Gold", 15, players[i].id);
+                            break;
+                        case 1:
+                            cout << "Local farmers had a good harvest this month.\n";
+                            players[i].rm.gather("Food", 20, players[i].id);
+                            break;
+                        case 2:
+                            cout << "Craftsmen produced extra building materials.\n";
+                            players[i].rm.gather("Wood", 15, players[i].id);
+                            players[i].rm.gather("Stone", 10, players[i].id);
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (const GameException& e) {
+                cout << "Error: " << e.message << "\n";
+            }
+        }
+        if (running) {
             turn++;
         }
     }
 
     displayTitleBox("GAME OVER");
+    for (int i = 0; i < numPlayers; i++) {
+        cout << "\nPlayer " << players[i].id << " (" << players[i].name << ") Final score: " << players[i].population.getTotal() * 10 << "\n";
+        string finalScoreInfo = "Final score for Player " + players[i].name + ": " +
+            to_string(players[i].population.getTotal() * 10) + " after " + to_string(turn) + " turns";
+        Logger::logScore(finalScoreInfo);
+    }
     cout << "\nThank you for playing Stronghold!\n";
-    cout << "Final score: " << population.getTotal() * 10 << "\n";
-
-    // Log final score
-    string finalScoreInfo = "Final score: " + to_string(population.getTotal() * 10) +
-        " after " + to_string(turn) + " turns";
-    Logger::logScore(finalScoreInfo);
 
     return 0;
 }

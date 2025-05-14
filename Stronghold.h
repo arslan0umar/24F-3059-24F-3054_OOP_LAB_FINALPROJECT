@@ -107,7 +107,7 @@ private:
 class Bank {
 public:
     Bank();
-    void menu(ResourceManager& rm, int playerId); // Updated signature
+    void menu(ResourceManager& rm, int playerId);
     int getLoan() const { return loan; }
     void setLoan(int newLoan);
     void display() const;
@@ -118,7 +118,7 @@ private:
 class Economy {
 public:
     Economy();
-    void manage(ResourceManager& rm, Peasant& peasant, Merchant& merchant, Noble& noble, int playerId); // Updated signature
+    void manage(ResourceManager& rm, Peasant& peasant, Merchant& merchant, Noble& noble, int playerId);
     void display() const;
     int getTaxRate() const { return taxRate; }
     void setTaxRate(int newRate);
@@ -132,8 +132,9 @@ public:
     void modify(int amt);
     void naturalChange();
     void display() const;
-    int getTotal() const { return count; }
+    int getTotal() const;
     void setTotal(int newCount);
+    bool isDefeated() const;
 private:
     int count;
 };
@@ -155,11 +156,12 @@ private:
 class EventManager {
 public:
     void trigger(ResourceManager& rm, Population& pop, Army& army, Peasant& peasant,
-        Merchant& merchant, Noble& noble, int playerId); // Updated signature
+        Merchant& merchant, Noble& noble, int playerId);
 };
 
 class Communication {
 public:
+    Communication();
     void sendMessage(int senderId, int receiverId, const string& message);
     void displayMessages(int playerId) const;
     void saveMessages() const;
@@ -211,21 +213,14 @@ private:
 class Conflict {
 public:
     Conflict();
-    void declareWar(int attacker, int defender, Army& attackerArmy, Army& defenderArmy,
-        Leader& attackerLeader, Leader& defenderLeader,
-        Peasant& attackerPeasant, Merchant& attackerMerchant, Noble& attackerNoble,
-        Peasant& defenderPeasant, Merchant& defenderMerchant, Noble& defenderNoble);
-    void betray(int betrayer, int victim, Diplomacy& diplomacy, Army& betrayerArmy, Army& victimArmy,
-        Leader& betrayerLeader, Leader& victimLeader,
-        Peasant& betrayerPeasant, Merchant& betrayerMerchant, Noble& betrayerNoble,
-        Peasant& victimPeasant, Merchant& victimMerchant, Noble& victimNoble);
+    void declareWar(int attacker, int defender, Army& attackerArmy, Army& defenderArmy, Leader& attackerLeader, Leader& defenderLeader, Peasant& attackerPeasant, Merchant& attackerMerchant, Noble& attackerNoble, Peasant& defenderPeasant, Merchant& defenderMerchant, Noble& defenderNoble);
+    void betray(int betrayer, int victim, Diplomacy& diplomacy, Army& betrayerArmy, Army& victimArmy, Leader& betrayerLeader, Leader& victimLeader, Peasant& betrayerPeasant, Merchant& betrayerMerchant, Noble& betrayerNoble, Peasant& victimPeasant, Merchant& victimMerchant, Noble& victimNoble);
     void displayWars() const;
     void saveWars() const;
     void loadWars();
 private:
     struct War {
-        int attacker;
-        int defender;
+        int attacker, defender;
         bool active;
     };
     War wars[20];
@@ -237,14 +232,14 @@ public:
     Map();
     void movePlayer(int playerId, int newX, int newY);
     void displayMap() const;
+    bool isPositionOccupied(int x, int y) const;
     void saveMap() const;
     void loadMap();
-    bool isPositionOccupied(int x, int y) const;
+    void removePlayer(int playerId);
 private:
     struct Position {
         int playerId;
-        int x;
-        int y;
+        int x, y;
     };
     Position positions[10];
     int positionCount;

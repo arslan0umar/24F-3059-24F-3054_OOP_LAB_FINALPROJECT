@@ -3,17 +3,22 @@
 #include <fstream>
 using namespace std;
 
-Diplomacy::Diplomacy() : treatyCount(0) {}
+Diplomacy::Diplomacy() : treatyCount(0) {
+    for (int i = 0; i < 20; i++) {
+        treaties[i].player1 = -1;
+        treaties[i].player2 = -1;
+        treaties[i].active = false;
+    }
+}
 
 void Diplomacy::formAlliance(int player1, int player2) {
     try {
         if (player1 == player2) {
-            throw GameException("Cannot form alliance with self!");
+            throw GameException("Cannot form alliance with yourself!");
         }
-        for (int i = 0; i < treatyCount; i++) {
-            if (treaties[i].player1 == player1 && treaties[i].player2 == player2 && treaties[i].active) {
-                throw GameException("Alliance already exists!");
-            }
+        if (hasAlliance(player1, player2)) {
+            throw GameException("Alliance already exists between Player " + to_string(player1) +
+                " and Player " + to_string(player2) + "!");
         }
         if (treatyCount >= 20) {
             throw GameException("Treaty log is full!");
@@ -23,7 +28,6 @@ void Diplomacy::formAlliance(int player1, int player2) {
         treaties[treatyCount].active = true;
         treatyCount++;
         cout << "Alliance formed between Player " << player1 << " and Player " << player2 << ".\n";
-        saveTreaties();
     }
     catch (const GameException& e) {
         cout << "Error: " << e.message << "\n";
@@ -32,19 +36,18 @@ void Diplomacy::formAlliance(int player1, int player2) {
 
 void Diplomacy::breakAlliance(int player1, int player2) {
     try {
-        bool found = false;
         for (int i = 0; i < treatyCount; i++) {
-            if (treaties[i].player1 == player1 && treaties[i].player2 == player2 && treaties[i].active) {
-                treaties[i].active = false;
-                found = true;
-                cout << "Alliance broken between Player " << player1 << " and Player " << player2 << ".\n";
-                saveTreaties();
-                break;
+            if ((treaties[i].player1 == player1 && treaties[i].player2 == player2) ||
+                (treaties[i].player1 == player2 && treaties[i].player2 == player1)) {
+                if (treaties[i].active) {
+                    treaties[i].active = false;
+                    cout << "Alliance broken between Player " << player1 << " and Player " << player2 << ".\n";
+                    return;
+                }
             }
         }
-        if (!found) {
-            throw GameException("No active alliance found between Player " + to_string(player1) + " and Player " + to_string(player2));
-        }
+        throw GameException("No active alliance found between Player " + to_string(player1) +
+            " and Player " + to_string(player2) + "!");
     }
     catch (const GameException& e) {
         cout << "Error: " << e.message << "\n";
@@ -53,7 +56,9 @@ void Diplomacy::breakAlliance(int player1, int player2) {
 
 bool Diplomacy::hasAlliance(int player1, int player2) const {
     for (int i = 0; i < treatyCount; i++) {
-        if (treaties[i].player1 == player1 && treaties[i].player2 == player2 && treaties[i].active) {
+        if (((treaties[i].player1 == player1 && treaties[i].player2 == player2) ||
+            (treaties[i].player1 == player2 && treaties[i].player2 == player1)) &&
+            treaties[i].active) {
             return true;
         }
     }
@@ -61,42 +66,53 @@ bool Diplomacy::hasAlliance(int player1, int player2) const {
 }
 
 void Diplomacy::displayTreaties() const {
-    cout << "Active Treaties:\n";
-    bool found = false;
+    cout << "\n===== Current Treaties =====\n";
+    bool hasTreaties = false;
     for (int i = 0; i < treatyCount; i++) {
         if (treaties[i].active) {
-            cout << "Player " << treaties[i].player1 << " and Player " << treaties[i].player2 << "\n";
-            found = true;
+            cout << "Alliance between Player " << treaties[i].player1 << " and Player "
+                << treaties[i].player2 << "\n";
+            hasTreaties = true;
         }
     }
-    if (!found) {
+    if (!hasTreaties) {
         cout << "No active treaties.\n";
     }
 }
 
 void Diplomacy::saveTreaties() const {
-    ofstream file("treaties.txt");
-    if (file.is_open()) {
+    try {
+        ofstream file("treaties.txt");
+        if (!file.is_open()) {
+            throw GameException("Unable to open treaties.txt!");
+        }
+        file << treatyCount << "\n";
         for (int i = 0; i < treatyCount; i++) {
-            file << treaties[i].player1 << " " << treaties[i].player2 << " " << (treaties[i].active ? 1 : 0) << "\n";
+            file << treaties[i].player1 << " " << treaties[i].player2 << " "
+                << (treaties[i].active ? 1 : 0) << "\n";
         }
         file.close();
     }
-    else {
-        cout << "Error: Unable to save treaties.\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
 }
 
 void Diplomacy::loadTreaties() {
-    ifstream file("treaties.txt");
-    treatyCount = 0;
-    if (file.is_open()) {
-        while (file >> treaties[treatyCount].player1 >> treaties[treatyCount].player2 >> treaties[treatyCount].active && treatyCount < 20) {
-            treatyCount++;
+    try {
+        ifstream file("treaties.txt");
+        if (!file.is_open()) {
+            throw GameException("Unable to open treaties.txt!");
+        }
+        file >> treatyCount;
+        for (int i = 0; i < treatyCount; i++) {
+            int active;
+            file >> treaties[i].player1 >> treaties[i].player2 >> active;
+            treaties[i].active = (active == 1);
         }
         file.close();
     }
-    else {
-        cout << "Error: Unable to load treaties.\n";
+    catch (const GameException& e) {
+        cout << "Error: " << e.message << "\n";
     }
 }

@@ -1,7 +1,6 @@
 ﻿#include <iostream>
 #include <string>
 #include <iomanip>
-#include <vector>
 #include <cstdlib>
 #include <ctime>
 #include "Stronghold.h"
@@ -58,14 +57,10 @@ void gatherResources(ResourceManager& rm, int playerId) {
     displayTitleBox("RESOURCE GATHERING");
     cout << "\nAvailable resources:\n";
     rm.display();
-    cout << "\nEnter resource number to gather (or 0 to return): ";
-    int resourceNum;
-    cin >> resourceNum;
-    if (resourceNum == 0) return;
-    if (resourceNum < 1 || resourceNum > rm.getResourceCount()) {
-        cout << "Invalid resource number!\n";
-        return;
-    }
+    cout << "\nEnter resource to gather (or 'back' to return): ";
+    string name;
+    cin >> name;
+    if (name == "back") return;
     cout << "Enter amount to gather: ";
     int amount;
     cin >> amount;
@@ -73,7 +68,7 @@ void gatherResources(ResourceManager& rm, int playerId) {
         if (amount <= 0) {
             throw GameException("Amount must be positive.");
         }
-        rm.gather(rm.getResourceName(resourceNum - 1), amount, playerId);
+        rm.gather(name, amount, playerId);
     }
     catch (const GameException& e) {
         cout << "Error: " << e.message << "\n";
@@ -84,14 +79,10 @@ void consumeResources(ResourceManager& rm, int playerId) {
     displayTitleBox("RESOURCE CONSUMPTION");
     cout << "\nAvailable resources:\n";
     rm.display();
-    cout << "\nEnter resource number to consume (or 0 to return): ";
-    int resourceNum;
-    cin >> resourceNum;
-    if (resourceNum == 0) return;
-    if (resourceNum < 1 || resourceNum > rm.getResourceCount()) {
-        cout << "Invalid resource number!\n";
-        return;
-    }
+    cout << "\nEnter resource to consume (or 'back' to return): ";
+    string name;
+    cin >> name;
+    if (name == "back") return;
     cout << "Enter amount to consume: ";
     int amount;
     cin >> amount;
@@ -99,7 +90,7 @@ void consumeResources(ResourceManager& rm, int playerId) {
         if (amount <= 0) {
             throw GameException("Amount must be positive.");
         }
-        rm.consume(rm.getResourceName(resourceNum - 1), amount, playerId);
+        rm.consume(name, amount, playerId);
     }
     catch (const GameException& e) {
         cout << "Error: " << e.message << "\n";
@@ -110,20 +101,12 @@ void tradeResources(ResourceManager& rm) {
     displayTitleBox("RESOURCE TRADING");
     cout << "\nAvailable resources:\n";
     rm.display();
-    cout << "\nEnter resource number to trade from: ";
-    int fromNum;
-    cin >> fromNum;
-    if (fromNum < 1 || fromNum > rm.getResourceCount()) {
-        cout << "Invalid resource number!\n";
-        return;
-    }
-    cout << "Enter resource number to trade to: ";
-    int toNum;
-    cin >> toNum;
-    if (toNum < 1 || toNum > rm.getResourceCount()) {
-        cout << "Invalid resource number!\n";
-        return;
-    }
+    cout << "\nEnter resource to trade from: ";
+    string fromResource;
+    cin >> fromResource;
+    cout << "Enter resource to trade to: ";
+    string toResource;
+    cin >> toResource;
     cout << "Enter amount to trade: ";
     int amount;
     cin >> amount;
@@ -131,7 +114,7 @@ void tradeResources(ResourceManager& rm) {
         if (amount <= 0) {
             throw GameException("Amount must be positive.");
         }
-        rm.trade(rm.getResourceName(fromNum - 1), rm.getResourceName(toNum - 1), amount);
+        rm.trade(fromResource, toResource, amount);
     }
     catch (const GameException& e) {
         cout << "Error: " << e.message << "\n";
@@ -150,6 +133,8 @@ struct Player {
     Noble noble;
     int id;
     string name;
+    bool isActive; // Added to track defeated kingdoms
+    Player() : id(0), isActive(true) {} // Initialize isActive to true
 };
 
 int main() {
@@ -168,7 +153,7 @@ int main() {
     cin.ignore(); // Clear newline
 
     // Initialize players
-    vector<Player> players(numPlayers);
+    Player players[10]; // Fixed-size array
     Communication comm;
     Diplomacy diplomacy;
     Market market;
@@ -203,7 +188,10 @@ int main() {
     int turn = 1;
 
     while (running) {
+        int activePlayers = 0;
         for (int i = 0; i < numPlayers; i++) {
+            if (!players[i].isActive) continue; // Skip defeated players
+            activePlayers++;
             displayBorder();
             displayTitleBox("TURN " + to_string(turn) + " - " + players[i].name + "'s Realm",
                 "Leader: " + players[i].leader.getName());
@@ -318,7 +306,7 @@ int main() {
 
                 case 5:
                     displayTitleBox("ECONOMY MANAGEMENT");
-                    players[i].economy.manage(players[i].rm, players[i].peasant, players[i].merchant, players[i].noble, players[i].id); // Added playerId
+                    players[i].economy.manage(players[i].rm, players[i].peasant, players[i].merchant, players[i].noble, players[i].id);
                     break;
 
                 case 6:
@@ -328,13 +316,13 @@ int main() {
 
                 case 7:
                     displayTitleBox("BANKING SYSTEM");
-                    players[i].bank.menu(players[i].rm, players[i].id); // Added playerId
+                    players[i].bank.menu(players[i].rm, players[i].id);
                     break;
 
                 case 8:
                     displayTitleBox("RANDOM EVENT");
                     eventManager.trigger(players[i].rm, players[i].population, players[i].army,
-                        players[i].peasant, players[i].merchant, players[i].noble, players[i].id); // Added playerId
+                        players[i].peasant, players[i].merchant, players[i].noble, players[i].id);
                     break;
 
                 case 9: {
@@ -466,6 +454,9 @@ int main() {
                         if (targetId < 1 || targetId > numPlayers || targetId == players[i].id) {
                             throw GameException("Invalid target ID.");
                         }
+                        if (!players[targetId - 1].isActive) {
+                            throw GameException("Cannot target a defeated kingdom!");
+                        }
                         if (conflictChoice == 1) {
                             conflict.declareWar(players[i].id, targetId, players[i].army, players[targetId - 1].army,
                                 players[i].leader, players[targetId - 1].leader,
@@ -540,6 +531,15 @@ int main() {
                             players[j].peasant, players[j].merchant, players[j].noble)) {
                             success = false;
                         }
+                        // Check population after loading to update isActive
+                        if (players[j].population.getTotal() <= 0) {
+                            players[j].isActive = false;
+                            players[j].noble.updateSatisfaction(-players[j].noble.getSatisfaction());
+                            players[j].merchant.updateSatisfaction(-players[j].merchant.getSatisfaction());
+                            players[j].peasant.updateSatisfaction(-players[j].peasant.getSatisfaction());
+                            players[j].army.setSoldiers(0);
+                            map.removePlayer(players[j].id);
+                        }
                     }
                     comm.loadMessages();
                     diplomacy.loadTreaties();
@@ -568,11 +568,35 @@ int main() {
                     players[i].peasant.checkEmigration(players[i].population);
                     players[i].merchant.checkEmigration(players[i].population);
                     players[i].noble.checkEmigration(players[i].population);
+                    if (players[i].population.getTotal() <= 0) {
+                        displayTitleBox("KINGDOM COLLAPSED");
+                        cout << "Player " << players[i].name << "'s kingdom has collapsed due to zero population!\n";
+                        players[i].isActive = false;
+                        players[i].noble.updateSatisfaction(-players[i].noble.getSatisfaction());
+                        players[i].merchant.updateSatisfaction(-players[i].merchant.getSatisfaction());
+                        players[i].peasant.updateSatisfaction(-players[i].peasant.getSatisfaction());
+                        players[i].army.setSoldiers(0);
+                        map.removePlayer(players[i].id);
+                        Logger::logScore("Player " + players[i].name + " lost due to zero population on turn " + to_string(turn));
+                        continue;
+                    }
                     if (!players[i].rm.hasResource("Food", 10)) {
                         displayTitleBox("WARNING");
                         cout << "Food supplies are critically low!\n";
                         players[i].population.modify(-5);
                         players[i].peasant.updateSatisfaction(-5);
+                        if (players[i].population.getTotal() <= 0) {
+                            displayTitleBox("KINGDOM COLLAPSED");
+                            cout << "Player " << players[i].name << "'s kingdom has collapsed due to starvation!\n";
+                            players[i].isActive = false;
+                            players[i].noble.updateSatisfaction(-players[i].noble.getSatisfaction());
+                            players[i].merchant.updateSatisfaction(-players[i].merchant.getSatisfaction());
+                            players[i].peasant.updateSatisfaction(-players[i].peasant.getSatisfaction());
+                            players[i].army.setSoldiers(0);
+                            map.removePlayer(players[i].id);
+                            Logger::logScore("Player " + players[i].name + " lost due to zero population on turn " + to_string(turn));
+                            continue;
+                        }
                     }
                     if (rand() % 100 < 20) {
                         displayTitleBox("RANDOM EVENT");
@@ -598,6 +622,23 @@ int main() {
             }
             catch (const GameException& e) {
                 cout << "Error: " << e.message << "\n";
+            }
+        }
+        if (activePlayers <= 1) {
+            running = false;
+            if (activePlayers == 1) {
+                for (int i = 0; i < numPlayers; i++) {
+                    if (players[i].isActive) {
+                        displayTitleBox("VICTORY");
+                        cout << "Player " << players[i].name << " is the last kingdom standing!\n";
+                        Logger::logScore("Player " + players[i].name + " won on turn " + to_string(turn));
+                        break;
+                    }
+                }
+            }
+            else {
+                displayTitleBox("GAME OVER");
+                cout << "All kingdoms have collapsed! No victor.\n";
             }
         }
         if (running) {

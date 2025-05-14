@@ -1,14 +1,12 @@
-0
-85 0
-0
-dawood 45
-5
+POPULATION 103
+ARMY 9 100
+BANK 0
+LEADER czc 55
+ECONOMY 10
+SOCIAL_CLASSES 52 58 50
+RESOURCES 5
 Food 100
-Gold 50
-Wood 80
-Stone 60
-Iron 30
-10
-0
-0
-0
+Wood 115
+Stone 110
+Iron 100
+Gold 100

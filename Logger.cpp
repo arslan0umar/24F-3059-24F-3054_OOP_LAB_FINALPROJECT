@@ -27,18 +27,17 @@ void Logger::saveGame(const Population& pop, const Army& army,
         if (!file.is_open()) {
             throw GameException("Unable to open game_save.txt for saving!");
         }
-        file << pop.getTotal() << "\n";
-        file << army.getSoldiers() << " " << army.getMorale() << "\n";
-        file << bank.getLoan() << "\n";
-        file << leader.getName() << " " << leader.getPopularity() << "\n";
-        file << rm.getResourceCount() << "\n";
+        file << "POPULATION " << pop.getTotal() << "\n";
+        file << "ARMY " << army.getSoldiers() << " " << army.getMorale() << "\n";
+        file << "BANK " << bank.getLoan() << "\n";
+        file << "LEADER " << leader.getName() << " " << leader.getPopularity() << "\n";
+        file << "ECONOMY " << economy.getTaxRate() << "\n";
+        file << "SOCIAL_CLASSES " << peasant.getSatisfaction() << " "
+            << merchant.getSatisfaction() << " " << noble.getSatisfaction() << "\n";
+        file << "RESOURCES " << rm.getResourceCount() << "\n";
         for (int i = 0; i < rm.getResourceCount(); i++) {
             file << rm.getResourceName(i) << " " << rm.getResourceValue(i) << "\n";
         }
-        file << economy.getTaxRate() << "\n";
-        file << peasant.getSatisfaction() << "\n";
-        file << merchant.getSatisfaction() << "\n";
-        file << noble.getSatisfaction() << "\n";
         file.close();
         cout << "Game saved successfully.\n";
     }
@@ -55,38 +54,49 @@ bool Logger::loadGame(Population& pop, Army& army, Bank& bank,
         if (!file.is_open()) {
             throw GameException("Unable to open game_save.txt for loading!");
         }
-        int population, soldiers, morale, loan, popularity, resourceCount, taxRate;
-        string leaderName;
-        file >> population;
-        pop.setTotal(population);
-        file >> soldiers >> morale;
+        string marker;
+        // Load Population
+        int totalPop;
+        file >> marker >> totalPop;
+        pop.setTotal(totalPop);
+        // Load Army
+        int soldiers, morale;
+        file >> marker >> soldiers >> morale;
         army.setSoldiers(soldiers);
         army.setMorale(morale);
-        file >> loan;
+        // Load Bank
+        int loan;
+        file >> marker >> loan;
         bank.setLoan(loan);
-        file.ignore();
-        getline(file, leaderName);
+        // Load Leader
+        file >> marker;
+        string name;
+        getline(file >> ws, name, ' ');
+        int popularity;
         file >> popularity;
-        leader.setName(leaderName);
+        leader.setName(name);
         leader.setPopularity(popularity);
-        file >> resourceCount;
+        // Load Economy
+        int taxRate;
+        file >> marker >> taxRate;
+        economy.setTaxRate(taxRate);
+        // Load Social Classes
+        int peasantSat, merchantSat, nobleSat;
+        file >> marker >> peasantSat >> merchantSat >> nobleSat;
+        peasant.updateSatisfaction(peasantSat - peasant.getSatisfaction());
+        merchant.updateSatisfaction((merchantSat - merchant.getSatisfaction()) / 2);
+        noble.updateSatisfaction((nobleSat - noble.getSatisfaction()) * 2);
+        // Load Resources
+        int resourceCount;
+        file >> marker >> resourceCount;
         ResourceManager tempRM;
         for (int i = 0; i < resourceCount; i++) {
             string resourceName;
             int amount;
             file >> resourceName >> amount;
-            tempRM.gather(resourceName, amount, 0); // Use temporary RM, playerId 0 for loading
+            tempRM.gather(resourceName, amount, 0);
         }
-        rm = tempRM; // Assign to clear existing resources
-        file >> taxRate;
-        economy.setTaxRate(taxRate);
-        int peasantSatisfaction, merchantSatisfaction, nobleSatisfaction;
-        file >> peasantSatisfaction;
-        peasant.updateSatisfaction(peasantSatisfaction - peasant.getSatisfaction());
-        file >> merchantSatisfaction;
-        merchant.updateSatisfaction(merchantSatisfaction - merchant.getSatisfaction());
-        file >> nobleSatisfaction;
-        noble.updateSatisfaction(nobleSatisfaction - noble.getSatisfaction());
+        rm = tempRM;
         file.close();
         cout << "Game loaded successfully.\n";
         return true;
